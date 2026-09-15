@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -66,10 +69,22 @@ fun MainScreen(viewModel: EventViewModel) {
 
     var isSearchExpanded by remember { mutableStateOf(false) }
     var eventToDeleteId by remember { mutableStateOf<Long?>(null) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
+                navigationIcon = {
+                    if (!isSearchExpanded) {
+                        IconButton(onClick = { showAboutDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = "About Us",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                },
                 title = {
                     if (isSearchExpanded) {
                         OutlinedTextField(
@@ -284,10 +299,52 @@ fun MainScreen(viewModel: EventViewModel) {
     }
 
     // Delete Confirmation Dialog
+    
+    // About Us Dialog
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(IndigoPrimary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Time Manager Pro", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = { 
+                Column {
+                    Text("Version 1.0.0", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Organize your life efficiently with seamless support for both Gregorian and Jalali calendars.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Designed with modern UI and robust offline capabilities.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutDialog = false }) {
+                    Text("Close", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
     eventToDeleteId?.let { id ->
         AlertDialog(
             onDismissRequest = { eventToDeleteId = null },
-            title = { Text("Delete Event?") },
+                            title = { Text("Delete Event?") },
             text = { Text("Are you sure you want to delete this event? This action cannot be undone.") },
             confirmButton = {
                 TextButton(
