@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TimeManager Pro</string>
+    <string name="tagline">Smart event reminders with Gregorian and Jalali dates</string>
+    <string name="add_event">Add Event</string>
+    <string name="edit_event">Edit Event</string>
+    <string name="event_title">Event Title</string>
+    <string name="date">Date</string>
+    <string name="jalali_date">Jalali Date</string>
+    <string name="time">Time</string>
+    <string name="all_day">All-Day</string>
+    <string name="category">Category</string>
+    <string name="repeat">Repeat</string>
+    <string name="notes">Notes</string>
+    <string name="checklist">Checklist</string>
+    <string name="pin_event">Pin to top</string>
+    <string name="delete">Delete</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="search_hint">Search events, notes…</string>
+    <string name="no_events">No events found</string>
+</resources>

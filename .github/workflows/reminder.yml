@@ -1,0 +1,54 @@
+name: Reminder Worker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  run-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run reminders (one-shot)
+        run: python -m worker.run_once
+        env:
+          TELEGRAM_WEBHOOK_SECRET: "dummy_secret_for_worker_only"
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          APP_ENV: production
+          APP_DEBUG: "false"
+          LOG_LEVEL: INFO
+          REMINDER_BATCH_SIZE: "200"
+          DEFAULT_REMINDER_HOUR: "9"
+          STALE_PROCESSING_SECS: "300"
+
+      # Dead-man's-switch: healthchecks.io alerts you if this job goes
+      # quiet (disabled, broken, or GitHub having a bad day) instead of
+      # you finding out from a user complaint. Requires a free account at
+      # healthchecks.io and a HEALTHCHECK_PING_URL repo secret set to the
+      # check's ping URL, e.g. https://hc-ping.com/<your-uuid>.
+      - name: Report success to healthcheck
+        if: success()
+        run: curl -fsS -m 10 --retry 3 "${{ secrets.HEALTHCHECK_PING_URL }}" || true
+
+      - name: Report failure to healthcheck
+        if: failure()
+        run: curl -fsS -m 10 --retry 3 "${{ secrets.HEALTHCHECK_PING_URL }}/fail" || true

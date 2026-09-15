@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#5b6cf8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="TimeManager Pro — Smart event reminders with Gregorian and Jalali dates for Telegram.">
+  <title>TimeManager Pro</title>
+  <!-- Self-hosted: Google Fonts is slow or unreachable for a large part of this
+       app's audience, and Plus Jakarta Sans carries no Persian glyphs at all,
+       so every Persian word fell back to whatever the device happened to have. -->
+  <link rel="preload" href="/static/fonts/Vazirmatn-Regular.woff2?v={{ asset_version }}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/style.css?v={{ asset_version }}">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <a href="#eventList" class="sr-only">Skip to content</a>
+
+  <noscript>
+    <div class="noscript-box">
+      <div class="noscript-icon">📅</div>
+      <p><strong>JavaScript Required</strong></p>
+      <p class="noscript-sub">Please enable JavaScript to use TimeManager Pro.</p>
+    </div>
+  </noscript>
+
+  <!-- ── Header ─────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="4" width="18" height="17" rx="3" stroke="currentColor" stroke-width="2"/>
+          <path d="M3 9h18" stroke="currentColor" stroke-width="2"/>
+          <path d="M8 2v4M16 2v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="15" r="2" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <strong class="brand-title">TimeManager Pro</strong>
+        <span class="brand-subtitle">Smart reminders in Telegram</span>
+      </div>
+    </div>
+    <button type="button" id="refreshBtn" class="icon-btn" aria-label="Refresh events" title="Refresh">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- ── Main Content ───────────────────────────────── -->
+  <main id="eventList" class="app-main">
+
+    <!-- Hero Card -->
+    <section class="hero-card">
+      <div class="hero-left">
+        <div class="hero-badge">✨ Your Personal Planner</div>
+        <h1 class="hero-title">Stay on top of every moment</h1>
+        <p class="hero-text">Save events, birthdays & tasks — get reminders directly in Telegram.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-box">
+          <span class="stat-icon">📅</span>
+          <strong id="eventCount" class="stat-value">0</strong>
+          <span class="stat-label">Events</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-icon">🔔</span>
+          <strong id="syncStatus" class="stat-value">Ready</strong>
+          <span class="stat-label">Status</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Toolbar -->
+    <section class="toolbar" aria-label="Filters and search">
+      <div class="toolbar-row" id="filterRow" role="group" aria-label="Category filter">
+        <button type="button" class="seg-btn is-active" data-filter="all">🌐 All</button>
+        <button type="button" class="seg-btn" data-filter="pinned">📌 Pinned</button>
+        <button type="button" class="seg-btn" data-filter="birthday">🎂 Birthday</button>
+        <button type="button" class="seg-btn" data-filter="work">💼 Work</button>
+        <button type="button" class="seg-btn" data-filter="health">❤️ Health</button>
+        <button type="button" class="seg-btn" data-filter="family">👨‍👩‍👧 Family</button>
+        <button type="button" class="seg-btn" data-filter="travel">✈️ Travel</button>
+        <button type="button" class="seg-btn" data-filter="finance">💰 Finance</button>
+        <button type="button" class="seg-btn" data-filter="study">📚 Study</button>
+        <button type="button" class="seg-btn" data-filter="past">🗄️ Past</button>
+      </div>
+      <label class="search-wrap" for="searchInput">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="search" id="searchInput" class="search-input" placeholder="Search events…" autocomplete="off" inputmode="search">
+      </label>
+    </section>
+
+    <!-- Skeleton (hidden by default, shown while loading) -->
+    <section id="skeletonState" class="skeleton-list" hidden>
+      <div class="skeleton-card"><div class="sk-line sk-title"></div><div class="sk-line sk-sub"></div><div class="sk-line sk-sub short"></div></div>
+      <div class="skeleton-card"><div class="sk-line sk-title"></div><div class="sk-line sk-sub"></div><div class="sk-line sk-sub short"></div></div>
+      <div class="skeleton-card"><div class="sk-line sk-title"></div><div class="sk-line sk-sub"></div></div>
+    </section>
+
+    <!-- Empty State -->
+    <section id="listState" class="empty-state" hidden>
+      <div class="empty-illustration" aria-hidden="true">
+        <div class="empty-circle">
+          <span class="empty-emoji">🗓️</span>
+        </div>
+        <div class="empty-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <h2 class="empty-state-title">No events yet!</h2>
+      <p class="empty-state-text">Add your first event and start receiving smart reminders directly in Telegram.</p>
+      <button type="button" id="emptyAddBtn" class="btn-primary btn-cta">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Add your first event
+      </button>
+      <div class="empty-hints">
+        <div class="hint-chip">🎂 Birthdays</div>
+        <div class="hint-chip">💼 Meetings</div>
+        <div class="hint-chip">❤️ Appointments</div>
+        <div class="hint-chip">✈️ Travel</div>
+      </div>
+    </section>
+
+    <!-- Error State -->
+    <section id="listErrorState" class="empty-state is-error" hidden>
+      <div class="empty-illustration" aria-hidden="true">
+        <div class="empty-circle is-error-circle"><span class="empty-emoji">⚠️</span></div>
+      </div>
+      <h2 class="empty-state-title">Something went wrong</h2>
+      <p class="empty-state-text">Could not connect to the server. Please check your connection and try again.</p>
+      <button type="button" id="retryBtn" class="btn-primary">Try again</button>
+    </section>
+
+    <!-- No Results State -->
+    <section id="noResultsState" class="empty-state" hidden>
+      <div class="empty-illustration" aria-hidden="true">
+        <div class="empty-circle"><span class="empty-emoji">🔍</span></div>
+      </div>
+      <h2 class="empty-state-title">No results found</h2>
+      <p class="empty-state-text">Try a different search term or filter.</p>
+    </section>
+
+    <!-- Events List -->
+    <section id="eventsWrap" class="events-wrap" aria-live="polite" aria-label="Event list"></section>
+
+    <!-- Load More -->
+    <div id="loadMoreWrap" class="load-more-wrap" hidden>
+      <button type="button" id="loadMoreBtn" class="btn-secondary btn-load-more">Load more events</button>
+    </div>
+  </main>
+
+  <main id="monthView" class="app-main view-pane" hidden></main>
+
+  <nav class="tabbar" id="tabbar" aria-label="Views">
+    <button type="button" class="tab is-active" data-view="list" aria-current="page">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <span data-i18n>List</span>
+    </button>
+    <button type="button" class="tab" data-view="month">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span data-i18n>Month</span>
+    </button>
+  </nav>
+
+  <!-- ── Floating Add Button ────────────────────────── -->
+  <button type="button" id="openComposerBtn" class="floating-add-btn" aria-label="Add event" aria-controls="composerSheet" aria-expanded="false">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+    <span>Add Event</span>
+  </button>
+
+  <!-- ── Sheet Overlay ──────────────────────────────── -->
+  <div id="sheetOverlay" class="sheet-overlay" hidden aria-hidden="true"></div>
+
+  <!-- ── Composer Sheet ─────────────────────────────── -->
+  <section id="composerSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="composerTitle" aria-hidden="true" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <div>
+        <h2 id="composerTitle" class="sheet-title">New Event</h2>
+        <p id="composerSubtitle" class="sheet-subtitle">Set title, date and repeat pattern.</p>
+      </div>
+      <button type="button" id="closeComposerX" class="icon-btn" aria-label="Close form">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form id="eventForm" class="sheet-form" novalidate>
+      <input type="hidden" id="eventId">
+
+      <div class="field-group">
+        <label class="field-label" for="title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Event Title
+        </label>
+        <input type="text" id="title" class="field-input" placeholder="e.g. Mom's Birthday" maxlength="200" autocomplete="off" required>
+      </div>
+
+      <div class="grid-2">
+        <div class="field-group">
+          <label class="field-label" for="date">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Gregorian Date
+          </label>
+          <input type="text" id="date" class="field-input field-picker" required
+                 readonly inputmode="none" autocomplete="off" placeholder="2026-04-20">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="date-jalali">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            Jalali Date
+          </label>
+          <input type="text" id="date-jalali" class="field-input field-picker" placeholder="1405/01/31"
+                 readonly inputmode="none" autocomplete="off" dir="ltr">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field-group">
+          <label class="field-label" for="repeat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            Repeat
+          </label>
+          <select id="repeat" class="field-input field-select">
+            <option value="none">One time</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="leadRepeat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span data-i18n>Remind me until then</span>
+          </label>
+          <select id="leadRepeat" class="field-input field-select">
+            <option value="none">Only on the day</option>
+            <option value="daily">Every day</option>
+            <option value="weekly">Every week</option>
+            <option value="monthly">Every month</option>
+          </select>
+          <p class="field-hint" data-i18n>Reminders before the event. They stop once the day arrives.</p>
+        </div>
+        <div class="field-group" id="targetChatWrap" hidden>
+          <label class="field-label" for="targetChat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span data-i18n>Also send it to</span>
+          </label>
+          <select id="targetChat" class="field-input field-select">
+            <option value="">Only me</option>
+          </select>
+          <p class="field-hint" data-i18n>Everyone in that chat will see the event title.</p>
+        </div>
+        <div class="field-group" id="repeatUntilWrap" hidden>
+          <label class="field-label" for="repeatUntil">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Repeat Until
+            <span class="field-optional">(optional)</span>
+          </label>
+          <input type="text" id="repeatUntil" class="field-input field-picker"
+                 readonly inputmode="none" autocomplete="off" placeholder="2026-12-31">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="category">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            Category
+          </label>
+          <select id="category" class="field-input field-select">
+            <option value="general">🌐 General</option>
+            <option value="birthday">🎂 Birthday</option>
+            <option value="work">💼 Work</option>
+            <option value="family">👨‍👩‍👧 Family</option>
+            <option value="health">❤️ Health</option>
+            <option value="travel">✈️ Travel</option>
+            <option value="finance">💰 Finance</option>
+            <option value="study">📚 Study</option>
+            <option value="other">📌 Other</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="check-row" for="allDay">
+        <input type="checkbox" id="allDay" checked>
+        <span class="check-label">
+          <span class="check-icon">📆</span>
+          All-day event
+        </span>
+      </label>
+
+      <div class="grid-2">
+        <div class="field-group" id="eventTimeWrap" hidden>
+          <label class="field-label" for="eventTime">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            Event Time
+          </label>
+          <input type="time" id="eventTime" class="field-input" value="09:00">
+        </div>
+        <div class="field-group" id="reminderTimeWrap">
+          <label class="field-label" for="reminderTime">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Reminder Time
+          </label>
+          <input type="time" id="reminderTime" class="field-input" value="09:00">
+        </div>
+        <div class="field-group" id="reminderOffsetWrap" hidden>
+          <label class="field-label" for="reminderOffset">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Remind Me
+          </label>
+          <select id="reminderOffset" class="field-input field-select">
+            <option value="0">At time of event</option>
+            <option value="15">15 minutes before</option>
+            <option value="30">30 minutes before</option>
+            <option value="60" selected>1 hour before</option>
+            <option value="120">2 hours before</option>
+            <option value="1440">1 day before</option>
+            <option value="10080">1 week before</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="check-row" for="pin">
+        <input type="checkbox" id="pin">
+        <span class="check-label">
+          <span class="check-icon">📌</span>
+          Pin this event to the top
+        </span>
+      </label>
+
+      <div class="field-group">
+        <label class="field-label" for="note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Note <span class="field-optional">(optional)</span>
+        </label>
+        <textarea id="note" class="field-input field-textarea" rows="4" maxlength="2000" placeholder="Add details, tasks, or a checklist…"></textarea>
+        <span class="char-count" id="noteCharCount">0 / 2000</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" id="cancelBtn" class="btn-secondary">Cancel</button>
+        <button type="submit" id="saveEventBtn" class="btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Event
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ── Detail Sheet ───────────────────────────────── -->
+  <section id="detailSheet" class="sheet detail-page" role="dialog" aria-modal="true" aria-labelledby="detailTitle" aria-hidden="true" hidden>
+    <div class="sheet-head">
+      <button type="button" id="closeDetailX" class="icon-btn detail-back" aria-label="Close details">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2 id="detailTitle" class="sheet-title">Event Details</h2>
+    </div>
+
+    <article class="detail-card">
+      <div class="detail-topline">
+        <span id="detailCategoryBadge" class="badge">General</span>
+        <span id="detailRepeatBadge" class="badge badge-muted">One time</span>
+        <span id="detailPinnedBadge" class="badge badge-pin" hidden>📌 Pinned</span>
+      </div>
+
+      <h3 id="detailEventTitle" class="detail-event-title">—</h3>
+
+      <!-- Countdown Ring -->
+      <div class="countdown-ring-wrap" id="countdownRingWrap">
+        <div class="countdown-ring" id="countdownRing">
+          <span id="countdownDays" class="ring-days">—</span>
+          <span class="ring-label">days</span>
+        </div>
+        <div id="detailCountdownText" class="countdown-ring-text">—</div>
+      </div>
+
+      <div class="detail-meta-grid">
+        <div class="detail-meta-box">
+          <span class="detail-meta-label" data-i18n>Gregorian</span>
+          <strong id="detailDateIso">—</strong>
+        </div>
+        <div class="detail-meta-box">
+          <span class="detail-meta-label" data-i18n>Jalali</span>
+          <strong id="detailDateJalali">—</strong>
+        </div>
+        <div class="detail-meta-box">
+          <span class="detail-meta-label" data-i18n>Time</span>
+          <strong id="detailTime">—</strong>
+        </div>
+        <div class="detail-meta-box">
+          <span class="detail-meta-label" data-i18n>Reminder</span>
+          <strong id="detailReminder">—</strong>
+        </div>
+        <div class="detail-meta-box">
+          <span class="detail-meta-label" data-i18n>Timezone</span>
+          <strong id="detailTimezone">—</strong>
+        </div>
+        <div class="detail-meta-box">
+          <span class="detail-meta-label" data-i18n>Status</span>
+          <strong id="detailStatus">—</strong>
+        </div>
+      </div>
+
+      <div class="detail-actions">
+        <button type="button" id="detailEditBtn" class="btn-action btn-action-edit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit
+        </button>
+        <button type="button" id="detailShareBtn" class="btn-action btn-action-share">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share
+        </button>
+        <button type="button" id="detailPinBtn" class="btn-action btn-action-pin">📌 Pin</button>
+        <button type="button" id="detailDeleteBtn" class="btn-action btn-action-delete">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Delete
+        </button>
+      </div>
+
+      <div class="field-group">
+        <div class="pane-tabs" role="tablist">
+          <button type="button" class="pane-tab is-active" data-pane="note" role="tab" aria-selected="true">
+            <span data-i18n>Note</span>
+          </button>
+          <button type="button" class="pane-tab" data-pane="checklist" role="tab" aria-selected="false">
+            <span data-i18n>Checklist</span>
+            <span class="pane-count" id="checklistCount" hidden></span>
+          </button>
+        </div>
+        <textarea id="detailNote" class="field-input field-textarea" rows="6" maxlength="2000" placeholder="Write a note or any details…"></textarea>
+        <div class="checklist" id="checklistPane" hidden>
+          <div class="checklist-items" id="checklistItems"></div>
+          <div class="checklist-add">
+            <input type="text" id="checklistInput" class="field-input" maxlength="200" placeholder="Add an item" />
+            <button type="button" class="btn-primary checklist-add-btn" id="checklistAdd" aria-label="Add item">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" id="detailNoteCancelBtn" class="btn-secondary">Reset</button>
+        <button type="button" id="detailNoteSaveBtn" class="btn-primary">Save Note</button>
+      </div>
+    </article>
+  </section>
+
+  <!-- ── First-run Onboarding ──────────────────────── -->
+  <div id="onboardingOverlay" class="confirm-overlay onboarding-overlay" hidden aria-hidden="true">
+    <div class="confirm-dialog onboarding-dialog" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+      <div class="confirm-icon" id="onboardingIcon">🗓️</div>
+      <h3 id="onboardingTitle" class="confirm-title">Never miss what matters</h3>
+      <p id="onboardingText" class="confirm-text">Add birthdays, appointments, and anything else you want to remember — TimeManager Pro keeps track so you don't have to.</p>
+      <div class="onboarding-dots" id="onboardingDots" aria-hidden="true">
+        <span class="is-active"></span><span></span><span></span>
+      </div>
+      <div class="confirm-actions onboarding-actions">
+        <button type="button" id="onboardingSkipBtn" class="btn-secondary">Skip</button>
+        <button type="button" id="onboardingNextBtn" class="btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Custom Confirm Dialog ──────────────────────── -->
+  <!-- Date picker. Its own overlay rather than a sheet, because it opens on
+       top of the composer sheet that contains the fields. -->
+  <div id="dpOverlay" class="dp-overlay" hidden aria-hidden="true">
+    <div class="dp-dialog" role="dialog" aria-modal="true" aria-labelledby="dpTitle">
+      <div class="sheet-handle" aria-hidden="true"></div>
+
+      <div class="dp-head">
+        <h2 class="sheet-title" id="dpTitle">Pick a date</h2>
+        <div class="dp-tabs" role="tablist" aria-label="Calendar">
+          <button type="button" class="dp-tab is-active" data-calendar="gregorian" role="tab" aria-selected="true">Gregorian</button>
+          <button type="button" class="dp-tab" data-calendar="jalali" role="tab" aria-selected="false">Jalali</button>
+        </div>
+      </div>
+
+      <div class="dp-wheels" id="dpWheels">
+        <div class="dp-wheel" id="dpYear"  role="listbox" aria-label="Year" tabindex="0"></div>
+        <div class="dp-wheel" id="dpMonth" role="listbox" aria-label="Month" tabindex="0"></div>
+        <div class="dp-wheel" id="dpDay"   role="listbox" aria-label="Day" tabindex="0"></div>
+        <div class="dp-highlight" aria-hidden="true"></div>
+      </div>
+
+      <p class="dp-preview" id="dpPreview" aria-live="polite"></p>
+
+      <div class="dp-actions">
+        <button type="button" class="btn-secondary" id="dpToday">Today</button>
+        <button type="button" class="btn-secondary" id="dpClear" hidden>Clear</button>
+        <button type="button" class="btn-secondary" id="dpCancel">Cancel</button>
+        <button type="button" class="btn-primary" id="dpConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmOverlay" class="confirm-overlay" hidden aria-hidden="true">
+    <div class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="confirm-icon" id="confirmIcon">🗑️</div>
+      <h3 id="confirmTitle" class="confirm-title">Delete Event?</h3>
+      <p id="confirmText" class="confirm-text">This action cannot be undone.</p>
+      <div class="confirm-actions">
+        <button type="button" id="confirmCancelBtn" class="btn-secondary">Cancel</button>
+        <button type="button" id="confirmOkBtn" class="btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast ─────────────────────────────────────── -->
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="/static/app.js?v={{ asset_version }}" defer></script>
+  <script src="/static/referral.js?v={{ asset_version }}" defer></script>
+  <script src="/static/share.js?v={{ asset_version }}" defer></script>
+  <script src="/static/views.js?v={{ asset_version }}" defer></script>
+  <script src="/static/invite.js?v={{ asset_version }}" defer></script>
+</body>
+</html>

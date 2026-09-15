@@ -1,0 +1,6 @@
+{
+  "name": "TimeManager Pro",
+  "description": "Smart event reminders with Gregorian and Jalali dates, categories, countdowns, and checklists",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
