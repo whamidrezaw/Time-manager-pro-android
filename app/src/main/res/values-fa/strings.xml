@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">تایم منیجر پرو</string>
+    <string name="tagline">یادآور هوشمند رویدادها با تقویم میلادی و شمسی</string>
+    <string name="add_event">افزودن رویداد</string>
+    <string name="edit_event">ویرایش رویداد</string>
+    <string name="event_title">عنوان رویداد</string>
+    <string name="date">تاریخ</string>
+    <string name="jalali_date">تاریخ شمسی</string>
+    <string name="time">زمان</string>
+    <string name="all_day">کل روز</string>
+    <string name="category">دسته‌بندی</string>
+    <string name="repeat">تکرار</string>
+    <string name="notes">یادداشت‌ها</string>
+    <string name="checklist">چک لیست</string>
+    <string name="pin_event">سنجاق کردن</string>
+    <string name="delete">حذف</string>
+    <string name="save">ذخیره</string>
+    <string name="cancel">لغو</string>
+    <string name="search_hint">جستجوی رویدادها و یادداشت‌ها…</string>
+    <string name="no_events">رویدادی یافت نشد</string>
+</resources>

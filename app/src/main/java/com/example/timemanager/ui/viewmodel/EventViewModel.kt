@@ -1,5 +1,7 @@
 package com.example.timemanager.ui.viewmodel
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -47,7 +49,7 @@ data class EventUiState(
     val isComposerOpen: Boolean = false
 )
 
-class EventViewModel(private val repository: EventRepository) : ViewModel() {
+class EventViewModel(application: Application, private val repository: EventRepository) : AndroidViewModel(application) {
 
     private val _selectedFilter = MutableStateFlow("all")
     private val _searchQuery = MutableStateFlow("")
@@ -216,17 +218,22 @@ class EventViewModel(private val repository: EventRepository) : ViewModel() {
                 remindersJson = JsonConverters.remindersToJson(reminders)
             )
 
+
             if (id == 0L) {
-                repository.insertEvent(event)
+                val newId = repository.insertEvent(event)
+                com.example.timemanager.util.AlarmScheduler.schedule(getApplication(), event.copy(id = newId))
             } else {
                 repository.updateEvent(event)
+                com.example.timemanager.util.AlarmScheduler.schedule(getApplication(), event)
             }
+
             closeComposer()
         }
     }
 
     fun deleteEvent(id: Long) {
         viewModelScope.launch {
+            com.example.timemanager.util.AlarmScheduler.cancel(getApplication(), id)
             repository.deleteEvent(id)
         }
     }
@@ -271,11 +278,11 @@ class EventViewModel(private val repository: EventRepository) : ViewModel() {
     }
 }
 
-class EventViewModelFactory(private val repository: EventRepository) : ViewModelProvider.Factory {
+class EventViewModelFactory(private val application: Application, private val repository: EventRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(EventViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return EventViewModel(repository) as T
+            return EventViewModel(application, repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

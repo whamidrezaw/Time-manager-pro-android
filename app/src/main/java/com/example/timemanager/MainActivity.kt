@@ -19,7 +19,7 @@ import com.example.timemanager.ui.viewmodel.EventViewModelFactory
 class MainActivity : ComponentActivity() {
 
     private val viewModel: EventViewModel by viewModels {
-        EventViewModelFactory((application as TimeManagerApp).repository)
+        EventViewModelFactory(application, (application as TimeManagerApp).repository)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
